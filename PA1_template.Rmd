@@ -8,7 +8,37 @@ output:
 
 ## Loading and preprocessing the data
 
+### Load the data
+Load the data from the following [URL](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip) and read the data from it by "read.csv".
+```{r loaddata, echo=TRUE}
+filename1 <- "repdata_data_activity.zip"
 
+#checking whether zip file exists or not.
+if (!file.exists(filename1)){
+  fileURL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+  download.file(fileURL, filename1)
+}  
+
+filename2 <- "activity.csv"
+
+#checking whether zip file is unzip or not
+if (!file.exists(filename2)) { 
+  unzip(filename2) 
+}
+
+#Read the original data  
+data <- read.csv(filename2)
+head(data)
+```
+
+
+### Process the original data
+Using "dplyr" library, change the data format by "tbl_df".
+```{r processdata, eho=TRUE}
+library(dplyr)
+data2 <- tbl_df(data)
+head(data2)
+```
 
 ## What is mean total number of steps taken per day?
 
