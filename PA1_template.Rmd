@@ -1,8 +1,9 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
+title: 'Reproducible Research: Peer Assessment 1'
+output:
   html_document:
-    keep_md: true
+    keep_md: yes
+  word_document: default
 ---
 
 
@@ -33,7 +34,7 @@ head(data)
 
 
 ### Process the original data
-Using "dplyr" library, change the data format by "tbl_df".
+Using "dplyr" library, change the data format by "tbl_df". And it is named *data2*. Output is confirmed by "head" function.
 ```{r processdata, eho=TRUE}
 library(dplyr)
 data2 <- tbl_df(data)
@@ -43,22 +44,35 @@ head(data2)
 ## What is mean total number of steps taken per day?
 
 1. Calculate the total number of steps taken per day.
-```{r totalsteps}
+
+*data2* is grouped by *date*. And the summation of *steps* per day is calculated and saved into *df.total_steps*. Output is confirmed by "head" function. 
+
+```{r totalsteps, eho=TRUE}
 data2_date <- group_by(data2, date)
 df.total_steps <- summarise(data2_date, total_steps = sum(steps))
+#summarize(data2_date, mean.steps = mean(steps, na.rm = TRUE))
 head(df.total_steps)
 ```
 
 2. Make a histogram of the total number of steps taken per day.
-```{r makehist}
+
+Using *df.total_steps*, histogram is made.
+```{r makehist, echo=TRUE}
 with(df.total_steps,
          hist(df.total_steps$total_steps,
          xlab = "Total steps taken per day", 
          main = "Total steps taken per day"))
+
+# Save png file
+dev.copy(png, file = "histogram.png")
+dev.off()
+
 ```
 
 3. Calculate and report the mean and median of the total number of steps taken per day.
-```{r meanandmedian}
+
+The mean and median of the steps taken per day is calculated with *df.total_steps*. And the results are pasted. During this calculation, NA data is removed.
+```{r meanandmedian, eho=TRUE}
 mean.steps <- mean(df.total_steps$total_steps, na.rm = TRUE)
 median.steps <- median(df.total_steps$total_steps, na.rm = TRUE)
 paste("The mean of the total number of steps taken per day is", mean.steps)
@@ -66,11 +80,104 @@ paste("The median of the the total number of steps taken per day is", median.ste
 ```
 
 ## What is the average daily activity pattern?
+Make a time series plot of the 5-minute interval (x-axis) for each date.
+```{r interval, eho=TRUE}
+library(ggplot2)
+ggplot(data2, aes(x = interval, y = steps, color = date)) +
+  geom_line()
+
+dev.copy(png, file = "interval.png")
+dev.off()
+
+```
+
+the average number of steps taken, averaged across all days (y-axis).  
+
+```{r avealldays, eho=TRUE}
+data2_interval <- group_by(data2, interval)
+df.ave_steps <- summarise(data2_interval, averaged_steps = mean(steps, na.rm = TRUE))
+head(df.ave_steps)
+```
 
 
+To find which 5-minute interval contains maximum number of steps, data is arranged by the averaged_steps. Then, the interval which appears in the first row is what this question is requesting. 
+
+```{r maxinterval, eho=TRUE}
+df <- arrange(df.ave_steps, desc(averaged_steps))
+paste("5-minute interval which contains the maximum number of steps across all the days in the dataset is",
+      as.numeric(df[1, 1]))
+```
 
 ## Imputing missing values
+Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+```{r countNA, eho=TRUE}
+paste("The total number of rows with NAs is", sum(is.na(data2$steps)))
+ 
+```
+Strategy for filling in all missing values in the dataset is to use the mean for all day.
 
+Create a new dataset that is equal to the original dataset but with the missing data filled in as *data2_filled*.
+And missing value was replaced by 37 (same value as mean step through all day)
+```{r filled, echo=TRUE}
+data2_filled <- data2
+#mutate(data2, steps = recode(steps, NA = )
+#a <- mean(data2$steps, na.rm = TRUE)
+data2_filled[is.na(data2$steps), 1] <- 37
+# mean(data2$steps, na.rm = TRUE)
+#<- data2[is.na(data2$steps), mean(data2$steps, na.rm = TRUE)]
+```
 
+Make a histogram with *data2_filled* and calculate mean and median total numner of steps.
+```{r makehist2, echo=TRUE}
+data2_filled_date <- group_by(data2_filled, date)
+df2.total_steps <- summarise(data2_filled_date, total_steps = sum(steps))
+
+with(df2.total_steps,
+         hist(total_steps,
+         xlab = "Total steps taken per day", 
+         main = "Total steps taken per day"))
+
+# Save png file
+dev.copy(png, file = "histogram2.png")
+dev.off()
+
+mean.steps2 <- mean(df2.total_steps$total_steps, na.rm = TRUE)
+median.steps2 <- median(df2.total_steps$total_steps, na.rm = TRUE)
+paste("The mean of the total number of steps taken per day after filled in is", mean.steps2)
+paste("The median of the the total number of steps taken per day after filled in is", median.steps2)
+
+```
+Mean value is 1.002 times larger than the the first part of the assignment.
+Median value  is 1.02 times larger than the the first part of the assignment.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+Create *category2* variable which shows each date is weekday or weekend using wday function.
+```{r week, echo=TRUE}
+library(lubridate)
+date_POSIX <- as.POSIXct(strptime(data2_filled$date, "%Y-%m-%d"))
+data3 <- mutate(data2_filled, date_POSIX = date_POSIX)
+data3 <- mutate(data3, category = wday(date_POSIX))
+data3 <- mutate(data3, category2 = case_when(
+  category == 1 ~ "weekend",
+  category == 7 ~ "weekend", 
+  TRUE ~ "weekday"))
+
+```
+
+Make a panel plot containing a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+```{r panelplot, echo=TRUE}
+data3_group <- group_by(data3, interval, category2)
+data3_sum1 <- summarise(data3_group, Number_of_steps = mean(steps))
+#head(data3_sum1)
+
+library(ggplot2)
+ggplot(data3_sum1, aes(x = interval, y = Number_of_steps)) +
+  geom_line() +
+  facet_grid(rows = vars(category2))
+
+dev.copy(png, file = "panelplot.png")
+dev.off()
+
+```
+
+
